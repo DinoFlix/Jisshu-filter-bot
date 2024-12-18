@@ -22,7 +22,7 @@ ADMINS = [int(admin) if id_pattern.search(admin) else admin for admin in environ
 USERNAME = environ.get('USERNAME', "https://t.me/I_Want_To_Be_Forever_Youngs") # ADMIN USERNAME
 LOG_CHANNEL = int(environ.get('LOG_CHANNEL', '-1002293028039'))
 MOVIE_GROUP_LINK = environ.get('MOVIE_GROUP_LINK', 'https://t.me/+rL4ESddyLwZkYzll')
-CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '-1002462248216').split()]
+CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHANNELS', '-1002462248216 -1002443467821').split()]
 #---------------------------------------------------------------
 #---------------------------------------------------------------
 DATABASE_URI = environ.get('DATABASE_URI', "mongodb+srv://dinoflix44:Nirav1234@cluster0.2isxw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
