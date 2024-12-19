@@ -384,4 +384,261 @@ async def year_search(client: Client, query: CallbackQuery):
     search = BUTTONS.get(key)
     cap = CAP.get(key)
     if not search:
-        await query.answer(script.OLD
+        await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name),show_alert=True)
+        return 
+    search = search.replace("_", " ")
+    files, n_offset, total = await get_search_results(f"{search} {year}", max_results=int(MAX_BTN), offset=offset)
+    try:
+        n_offset = int(n_offset)
+    except:
+        n_offset = 0
+    files = [file for file in files if re.search(year, file.file_name, re.IGNORECASE)]
+    if not files:
+        await query.answer(f"sᴏʀʀʏ ʏᴇᴀʀ {year.title()} ɴᴏᴛ ғᴏᴜɴᴅ ғᴏʀ {search}", show_alert=1)
+        return
+
+    batch_ids = files
+    temp.FILES_ID[f"{query.message.chat.id}-{query.id}"] = batch_ids
+    batch_link = f"batchfiles#{query.message.chat.id}#{query.id}#{query.from_user.id}"
+
+    reqnxt = query.from_user.id if query.from_user else 0
+    settings = await get_settings(query.message.chat.id)
+    temp.CHAT[query.from_user.id] = query.message.chat.id
+    ads, ads_name, _ = await mdb.get_advirtisment()
+    ads_text = ""
+    if ads is not None and ads_name is not None:
+        ads_url = f"https://t.me/{temp.U_NAME}?start=ads"
+        ads_text = f"<a href={ads_url}>{ads_name}</a>"
+    js_ads = f"\n━━━━━━━━━━━━━━━━━━\n <b>{ads_text}</b> \n━━━━━━━━━━━━━━━━━━" if ads_text else ""
+    #del_msg = f"\n\n<b>⚠️ ᴛʜɪs ᴍᴇssᴀɢᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴀꜰᴛᴇʀ <code>{get_readable_time(DELETE_TIME)}</code> ᴛᴏ ᴀᴠᴏɪᴅ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs</b>" if settings["auto_delete"] else ''
+    links = ""
+    if settings["link"]:
+        btn = []
+        for file_num, file in enumerate(files, start=offset+1):
+            links += f"""<b>\n\n{file_num}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file.file_id}>[{get_size(file.file_size)}] {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}</a></b>"""
+    else:
+        btn = [[
+                InlineKeyboardButton(text=f"🔗 {get_size(file.file_size)}≽ {formate_file_name(file.file_name)}", callback_data=f'cfiles#{reqnxt}#{file.file_id}'),]
+                   for file in files
+              ]
+        
+   
+    btn.insert(0,[
+	InlineKeyboardButton("📥 𝗦𝗲𝗻𝗱 𝗔𝗹𝗹 𝗙𝗶𝗹𝗲𝘀 📥", callback_data=batch_link),
+        ])
+    btn.insert(1, [
+        InlineKeyboardButton("ǫᴜᴀʟɪᴛʏ ", callback_data=f"qualities#{key}#{offset}#{req}"),
+	InlineKeyboardButton("ꜱᴇᴀꜱᴏɴ", callback_data=f"seasons#{key}#{offset}#{req}"),
+        InlineKeyboardButton("ʟᴀɴɢᴜᴀɢᴇ ", callback_data=f"languages#{key}#{offset}#{req}")
+    ])    
+    
+    if n_offset== '':
+        btn.append(
+            [InlineKeyboardButton(text="🚸 ɴᴏ ᴍᴏʀᴇ ᴘᴀɢᴇs 🚸", callback_data="buttons")]
+        )
+    elif n_offset == 0:
+        btn.append(
+            [InlineKeyboardButton("⪻ ʙᴀᴄᴋ", callback_data=f"years_search#{year}#{key}#{offset- int(MAX_BTN)}#{orginal_offset}#{req}"),
+             InlineKeyboardButton(f"{math.ceil(offset / int(MAX_BTN)) + 1}/{math.ceil(total / int(MAX_BTN))}", callback_data="pages",),
+            ])
+    elif offset==0:
+        btn.append(
+            [InlineKeyboardButton(f"{math.ceil(offset / int(MAX_BTN)) + 1}/{math.ceil(total / int(MAX_BTN))}",callback_data="pages",),
+             InlineKeyboardButton("ɴᴇxᴛ ⪼", callback_data=f"years_search#{year}#{key}#{n_offset}#{orginal_offset}#{req}"),])
+    else:
+        btn.append(
+            [InlineKeyboardButton("⪻ ʙᴀᴄᴋ", callback_data=f"years_search#{year}#{key}#{offset- int(MAX_BTN)}#{orginal_offset}#{req}"),
+             InlineKeyboardButton(f"{math.ceil(offset / int(MAX_BTN)) + 1}/{math.ceil(total / int(MAX_BTN))}", callback_data="pages",),
+             InlineKeyboardButton("ɴᴇxᴛ ⪼", callback_data=f"years_search#{year}#{key}#{n_offset}#{orginal_offset}#{req}"),])
+
+    btn.append([
+        InlineKeyboardButton(text="⪻ ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴘᴀɢᴇ", callback_data=f"next_{req}_{key}_{orginal_offset}"),])
+    await query.message.edit_text(cap + links + js_ads, disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btn))
+    return
+
+@Client.on_callback_query(filters.regex(r"^qualities#"))
+async def quality_cb_handler(client: Client, query: CallbackQuery):
+    _, key, offset, req = query.data.split("#")
+    if int(req) != query.from_user.id:
+        return await query.answer(script.ALRT_TXT, show_alert=True)
+    btn= []
+    for i in range(0, len(QUALITIES)-1, 3):
+        btn.append([
+            InlineKeyboardButton(
+                text=QUALITIES[i].title(),
+                callback_data=f"quality_search#{QUALITIES[i].lower()}#{key}#0#{offset}#{req}"
+            ),
+            InlineKeyboardButton(
+                text=QUALITIES[i+1].title(),
+                callback_data=f"quality_search#{QUALITIES[i+1].lower()}#{key}#0#{offset}#{req}"
+            ),
+            InlineKeyboardButton(
+                text=QUALITIES[i+2].title(),
+                callback_data=f"quality_search#{QUALITIES[i+2].lower()}#{key}#0#{offset}#{req}"
+            ),
+        ])
+    btn.append([InlineKeyboardButton(text="⪻ ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴘᴀɢᴇ", callback_data=f"next_{req}_{key}_{offset}")])
+    await query.message.edit_text("<b>ɪɴ ᴡʜɪᴄʜ ǫᴜᴀʟɪᴛʏ ᴅᴏ ʏᴏᴜ ᴡᴀɴᴛ, ᴄʜᴏᴏsᴇ ғʀᴏᴍ ʜᴇʀᴇ ↓↓</b>", reply_markup=InlineKeyboardMarkup(btn))
+    return
+
+@Client.on_callback_query(filters.regex(r"^quality_search#"))
+async def quality_search(client: Client, query: CallbackQuery):
+    _, qul, key, offset, orginal_offset, req = query.data.split("#")
+    if int(req) != query.from_user.id:
+        return await query.answer(script.ALRT_TXT, show_alert=True)	
+    offset = int(offset)
+    search = BUTTONS.get(key)
+    cap = CAP.get(key)
+    if not search:
+        await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name),show_alert=True)
+        return 
+    search = search.replace("_", " ")
+    files, n_offset, total = await get_search_results(f"{search} {qul}", max_results=int(MAX_BTN), offset=offset)
+    try:
+        n_offset = int(n_offset)
+    except:
+        n_offset = 0
+    files = [file for file in files if re.search(qul, file.file_name, re.IGNORECASE)]
+    if not files:
+        await query.answer(f"sᴏʀʀʏ ǫᴜᴀʟɪᴛʏ {qul.title()} ɴᴏᴛ ғᴏᴜɴᴅ ғᴏʀ {search}", show_alert=1)
+        return
+
+    batch_ids = files
+    temp.FILES_ID[f"{query.message.chat.id}-{query.id}"] = batch_ids
+    batch_link = f"batchfiles#{query.message.chat.id}#{query.id}#{query.from_user.id}"
+
+    reqnxt = query.from_user.id if query.from_user else 0
+    settings = await get_settings(query.message.chat.id)
+    temp.CHAT[query.from_user.id] = query.message.chat.id
+    ads, ads_name, _ = await mdb.get_advirtisment()
+    ads_text = ""
+    if ads is not None and ads_name is not None:
+        ads_url = f"https://t.me/{temp.U_NAME}?start=ads"
+        ads_text = f"<a href={ads_url}>{ads_name}</a>"
+    js_ads = f"\n━━━━━━━━━━━━━━━━━━\n <b>{ads_text}</b> \n━━━━━━━━━━━━━━━━━━" if ads_text else ""
+  #  del_msg = f"\n\n<b>⚠️ ᴛʜɪs ᴍᴇssᴀɢᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴀꜰᴛᴇʀ <code>{get_readable_time(DELETE_TIME)}</code> ᴛᴏ ᴀᴠᴏɪᴅ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs</b>" if settings["auto_delete"] else ''
+    links = ""
+    if settings["link"]:
+        btn = []
+        for file_num, file in enumerate(files, start=offset+1):
+            links += f"""<b>\n\n{file_num}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file.file_id}>[{get_size(file.file_size)}] {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}</a></b>"""
+    else:
+        btn = [[
+                InlineKeyboardButton(text=f"🔗 {get_size(file.file_size)}≽ {formate_file_name(file.file_name)}", callback_data=f'cfiles#{reqnxt}#{file.file_id}'),]
+                   for file in files
+              ]
+        
+ 
+    btn.insert(0,[
+	InlineKeyboardButton("📥 𝗦𝗲𝗻𝗱 𝗔𝗹𝗹 𝗙𝗶𝗹𝗲𝘀 📥", callback_data=batch_link),
+        ])
+    btn.insert(1, [
+        InlineKeyboardButton("ǫᴜᴀʟɪᴛʏ", callback_data=f"qualities#{key}#{offset}#{req}"),
+	InlineKeyboardButton("ꜱᴇᴀꜱᴏɴ", callback_data=f"seasons#{key}#{offset}#{req}"),
+        InlineKeyboardButton("ʟᴀɴɢᴜᴀɢᴇ", callback_data=f"languages#{key}#{offset}#{req}"),
+    ])    
+    if n_offset== '':
+        btn.append(
+            [InlineKeyboardButton(text="🚸 ɴᴏ ᴍᴏʀᴇ ᴘᴀɢᴇs 🚸", callback_data="buttons")]
+        )
+    elif n_offset == 0:
+        btn.append(
+            [InlineKeyboardButton("⪻ ʙᴀᴄᴋ", callback_data=f"quality_search#{qul}#{key}#{offset- int(MAX_BTN)}#{orginal_offset}#{req}"),
+             InlineKeyboardButton(f"{math.ceil(offset / int(MAX_BTN)) + 1}/{math.ceil(total / int(MAX_BTN))}", callback_data="pages",),
+            ])
+    elif offset==0:
+        btn.append(
+            [InlineKeyboardButton(f"{math.ceil(offset / int(MAX_BTN)) + 1}/{math.ceil(total / int(MAX_BTN))}",callback_data="pages",),
+             InlineKeyboardButton("ɴᴇxᴛ ⪼", callback_data=f"quality_search#{qul}#{key}#{n_offset}#{orginal_offset}#{req}"),])
+    else:
+        btn.append(
+            [InlineKeyboardButton("⪻ ʙᴀᴄᴋ", callback_data=f"quality_search#{qul}#{key}#{offset- int(MAX_BTN)}#{orginal_offset}#{req}"),
+             InlineKeyboardButton(f"{math.ceil(offset / int(MAX_BTN)) + 1}/{math.ceil(total / int(MAX_BTN))}", callback_data="pages",),
+             InlineKeyboardButton("ɴᴇxᴛ ⪼", callback_data=f"quality_search#{qul}#{key}#{n_offset}#{orginal_offset}#{req}"),])
+
+    btn.append([
+        InlineKeyboardButton(text="⪻ ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴘᴀɢᴇ", callback_data=f"next_{req}_{key}_{orginal_offset}"),])
+    await query.message.edit_text(cap + links + js_ads, disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btn))
+    return
+    await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
+
+@Client.on_callback_query(filters.regex(r"^languages#"))
+async def languages_cb_handler(client: Client, query: CallbackQuery):
+    _, key, offset, req = query.data.split("#")
+    if int(req) != query.from_user.id:
+        return await query.answer(script.ALRT_TXT, show_alert=True)
+	    btn  = []
+    for i in range(0, len(LANGUAGES)-1, 2):
+        btn.append([
+            InlineKeyboardButton(
+                text=LANGUAGES[i].title(),
+                callback_data=f"lang_search#{LANGUAGES[i].lower()}#{key}#0#{offset}#{req}"
+            ),
+            InlineKeyboardButton(
+                text=LANGUAGES[i+1].title(),
+                callback_data=f"lang_search#{LANGUAGES[i+1].lower()}#{key}#0#{offset}#{req}"
+            ),
+                    ])
+    btn.append([InlineKeyboardButton(text="⪻ ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴘᴀɢᴇ", callback_data=f"next_{req}_{key}_{offset}")])
+    await query.message.edit_text("<b>ɪɴ ᴡʜɪᴄʜ ʟᴀɴɢᴜᴀɢᴇ ᴅᴏ ʏᴏᴜ ᴡᴀɴᴛ, ᴄʜᴏᴏsᴇ ғʀᴏᴍ ʜᴇʀᴇ ↓↓</b>", reply_markup=InlineKeyboardMarkup(btn))
+    return
+
+@Client.on_callback_query(filters.regex(r"^lang_search#"))
+async def lang_search(client: Client, query: CallbackQuery):
+    _, lang, key, offset, req = query.data.split("#")
+    lang2 = lang[:3]
+    if int(req) != query.from_user.id:
+        return await query.answer(script.ALRT_TXT, show_alert=True)	
+    offset = int(offset)
+    search = BUTTONS.get(key)
+    cap = CAP.get(key)
+    if not search:
+        await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name),show_alert=True)
+        return 
+    search = search.replace("_", " ")
+    files, n_offset, total = await get_search_results(f"{search} {lang}", max_results=int(MAX_BTN), offset=offset)
+    files2, n_offset2, total2 = await get_search_results(f"{search} {lang2}", max_results=int(MAX_BTN), offset=offset)
+    total += total2
+    try:
+        n_offset = int(n_offset)
+    except:
+        try: 
+            n_offset = int(n_offset2)
+        except : 
+            n_offset = 0
+    files = [file for file in files if re.search(lang, file.file_name, re.IGNORECASE)]
+    if not files:
+        files = [file for file in files2 if re.search(lang2, file.file_name, re.IGNORECASE)]
+        if not files:
+            return await query.answer(f"sᴏʀʀʏ ʟᴀɴɢᴜᴀɢᴇ {lang.title()} ɴᴏᴛ ғᴏᴜɴᴅ ғᴏʀ {search}", show_alert=1)
+
+    batch_ids = files
+    temp.FILES_ID[f"{query.message.chat.id}-{query.id}"] = batch_ids
+    batch_link = f"batchfiles#{query.message.chat.id}#{query.id}#{query.from_user.id}"
+
+    reqnxt = query.from_user.id if query.from_user else 0
+    settings = await get_settings(query.message.chat.id)
+    group_id = query.message.chat.id
+    temp.CHAT[query.from_user.id] = query.message.chat.id
+    ads, ads_name, _ = await mdb.get_advirtisment()
+    ads_text = ""
+    if ads is not None and ads_name is not None:
+        ads_url = f"https://t.me/{temp.U_NAME}?start=ads"
+        ads_text = f"<a href={ads_url}>{ads_name}</a>"
+
+    js_ads = f"\n━━━━━━━━━━━━━━━━━━\n <b>{ads_text}</b> \n━━━━━━━━━━━━━━━━━━" if ads_text else ""
+    #del_msg = f"\n\n<b>⚠️ ᴛʜɪs ᴍᴇssᴀɢᴇ ᴡɪʟʟ ʙᴇ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴀꜰᴛᴇʀ <code>{get_readable_time(DELETE_TIME)}</code> ᴛᴏ ᴀᴠᴏɪᴅ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs</b>" if settings["auto_delete"] else ''
+    links = ""
+    if settings["link"]:
+        btn = []
+        for file_num, file in enumerate(files, start=offset+1):
+            links += f"""<b>\n\n{file_num}. <a href=https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file.file_id}>[{get_size(file.file_size)}] {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}</a></b>"""
+    else:
+        btn = [[
+                InlineKeyboardButton(text=f"🔗 {get_size(file.file_size)}≽ {formate_file_name(file.file_name)}", callback_data=f'cfiles#{reqnxt}#{file.file_id}'),]
+                   for file in files
+              ]
+        
+
+    btn.insert(0,[
+	InlineKeyboardButton("📥 𝗦𝗲𝗻𝗱 
