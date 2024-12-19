@@ -567,7 +567,7 @@ async def languages_cb_handler(client: Client, query: CallbackQuery):
     _, key, offset, req = query.data.split("#")
     if int(req) != query.from_user.id:
         return await query.answer(script.ALRT_TXT, show_alert=True)
-	    btn  = []
+    btn  = []
     for i in range(0, len(LANGUAGES)-1, 2):
         btn.append([
             InlineKeyboardButton(
