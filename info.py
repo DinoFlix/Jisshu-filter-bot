@@ -43,16 +43,16 @@ SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'https://t.me/+hpBd74FndeEyYWM9') #Su
 #---------------------------------------------------------------
 IS_VERIFY = is_enabled('IS_VERIFY', True)
 #---------------------------------------------------------------
-TUTORIAL = environ.get("TUTORIAL", "https://t.me/")
-TUTORIAL_2 = environ.get("TUTORIAL_2", "https://t.me/")
-TUTORIAL_3 = environ.get("TUTORIAL_3", "https://t.me/")
+TUTORIAL = environ.get("TUTORIAL", "https://t.me/+i83vXOkM08YwOTA9")
+TUTORIAL_2 = environ.get("TUTORIAL_2", "https://t.me/+i83vXOkM08YwOTA9")
+TUTORIAL_3 = environ.get("TUTORIAL_3", "https://t.me/+i83vXOkM08YwOTA9")
 VERIFY_IMG = environ.get("VERIFY_IMG", "https://graph.org/file/1669ab9af68eaa62c3ca4.jpg")
 SHORTENER_API = environ.get("SHORTENER_API", "bee8c5a36ee6fd892040733b34cc088a3fbcd5f4")
-SHORTENER_WEBSITE = environ.get("SHORTENER_WEBSITE", 'http://instantearn.in')
+SHORTENER_WEBSITE = environ.get("SHORTENER_WEBSITE", 'instantearn.in')
 SHORTENER_API2 = environ.get("SHORTENER_API2", "bee8c5a36ee6fd892040733b34cc088a3fbcd5f4")
-SHORTENER_WEBSITE2 = environ.get("SHORTENER_WEBSITE2", 'http://instantearn.in')
+SHORTENER_WEBSITE2 = environ.get("SHORTENER_WEBSITE2", 'instantearn.in')
 SHORTENER_API3 = environ.get("SHORTENER_API3", "bee8c5a36ee6fd892040733b34cc088a3fbcd5f4")
-SHORTENER_WEBSITE3 = environ.get("SHORTENER_WEBSITE3", 'http://instantearn.in')
+SHORTENER_WEBSITE3 = environ.get("SHORTENER_WEBSITE3", 'instantearn.in')
 TWO_VERIFY_GAP = int(environ.get('TWO_VERIFY_GAP', "14400"))
 THREE_VERIFY_GAP = int(environ.get('THREE_VERIFY_GAP', "14400"))
 #---------------------------------------------------------------
